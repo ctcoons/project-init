@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create a Project</title>
+</head>
+<body>
+
+<h1>Create a Project</h1>
+
+<form id="generate-form" method="post" action="{% url 'start_project' %}">
+    {% csrf_token %}
+    <label>Project Name:</label>
+    <input type="text" name="project_name" required><br>
+
+    <label>Description:</label>
+    <textarea name="description"></textarea><br>
+
+    <label>Number of Groups:</label>
+    <input type="number" name="num_groups" value="1" min="1" required><br>
+
+    <div id="group-fields">
+        <!-- Group input fields will be inserted here -->
+    </div>
+
+    <button type="submit">Generate Excel</button>
+</form>
+
+<script>
+    const numGroupsInput = document.querySelector('[name="num_groups"]');
+    const groupFields = document.getElementById("group-fields");
+
+    function updateGroupFields(count) {
+        groupFields.innerHTML = '';  // clear existing inputs
+        for (let i = 1; i <= count; i++) {
+            const label = document.createElement('label');
+            label.textContent = `Group ${i} Name:`;
+            groupFields.appendChild(label);
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = `group_${i}`;
+            groupFields.appendChild(input);
+
+            groupFields.appendChild(document.createElement('br'));
+        }
+    }
+
+    numGroupsInput.addEventListener("input", function () {
+        const value = Math.max(1, parseInt(this.value) || 1);
+        this.value = value;
+        updateGroupFields(value);
+    });
+
+    updateGroupFields(numGroupsInput.value);
+</script>
+
+<hr>
+
+<form id="upload-form" method="post" enctype="multipart/form-data" action="{% url 'upload_data' %}">
+    {% csrf_token %}
+    <input type="file" name="excel_file" accept=".xlsx,.xlsm" required disabled id="upload-file">
+    <button type="submit" disabled id="upload-btn">Upload Edited Excel</button>
+</form>
+
+<script>
+    const generateForm = document.getElementById('generate-form');
+    const uploadFile = document.getElementById('upload-file');
+    const uploadBtn = document.getElementById('upload-btn');
+
+    generateForm.addEventListener('submit', () => {
+        // Enable upload inputs immediately when generate is clicked
+        uploadFile.disabled = false;
+        uploadBtn.disabled = false;
+    });
+</script>
+
+</body>
+</html>
