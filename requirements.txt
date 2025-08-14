@@ -2,4 +2,5 @@ asgiref==3.9.1
 Django==5.2.5
 et_xmlfile==2.0.0
 openpyxl==3.1.5
+pyspellchecker==0.8.3
 sqlparse==0.5.3

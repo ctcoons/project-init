@@ -1,6 +1,6 @@
 
 
-class ProjectData:
+class FileReaderProjectData:
 
     def __init__(self, name: str, owner: str, description: str, groups: list):
         self.name = name

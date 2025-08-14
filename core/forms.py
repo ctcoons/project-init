@@ -20,3 +20,7 @@ class ProjectDataForm(forms.ModelForm):
             'group_names': forms.Textarea(attrs={'rows': 3}),
             'description': forms.Textarea(attrs={'rows': 4}),
         }
+
+
+class UploadExcelForm(forms.Form):
+    excel_file = forms.FileField(label="Upload Completed Excel File")

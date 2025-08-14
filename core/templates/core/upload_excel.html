@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Upload Edited Excel</title>
+</head>
+<body>
+
+<h1>Upload Edited Excel</h1>
+
+<form id="upload-form" method="post" enctype="multipart/form-data" action="{% url 'upload_excel' %}">
+    {% csrf_token %}
+    <input type="hidden" name="project_id" id="project_id" value="{{ project_id }}">
+    <input type="file" name="excel_file" accept=".xlsx,.xlsm" required id="upload-file">
+    <button type="submit" id="upload-btn">Upload Edited Excel</button>
+</form>
+
+{% if result %}
+    <h3>Upload Result:</h3>
+    <p>Success: {{ result.success }}</p>
+    <p>Message: {{ result.message }}</p>
+    <h4>Independent Variables:</h4>
+    <pre>{{ result.independent_variables }}</pre>
+    <h4>Data:</h4>
+    <pre>{{ result.data }}</pre>
+    <h4>Possible Typos:</h4>
+    <pre>{{ result.possible_typos }}</pre>
+{% endif %}
+
+</body>
+</html>

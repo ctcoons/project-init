@@ -7,7 +7,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font, Protection, Border, Side
 from openpyxl.worksheet.datavalidation import DataValidation
 
-from core.utils.excel.project_data import ProjectData
+from core.utils.excel.project_data import FileReaderProjectData
 
 
 class ExcelFileGenerator:
@@ -38,7 +38,7 @@ class ExcelFileGenerator:
 
         return new_file_path
 
-    def make_new_file_from_template_with_openpyxl(self, project_data: ProjectData, output_name=None) -> str:
+    def make_new_file_from_template_with_openpyxl(self, project_data: FileReaderProjectData, output_name=None) -> str:
         INPUT_FILE = "metadataTemplate6.xlsm"
         file = self.make_a_copy(INPUT_FILE, output_name)
         wb = load_workbook(file, keep_vba=True)
@@ -68,7 +68,7 @@ class ExcelFileGenerator:
             ws.add_data_validation(dv)
             dv.add(f"A{start_row + 1}")
 
-    def add_project_data(self, ws, project_data: ProjectData) -> None:
+    def add_project_data(self, ws, project_data: FileReaderProjectData) -> None:
         """
         :param ws: the current worksheet
         :param project_data: the project data, including name, description, and groups []

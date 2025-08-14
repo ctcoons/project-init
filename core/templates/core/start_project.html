@@ -2,36 +2,71 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Create a Project</title>
+    <title>Start Project</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        #popup {
+            display: none;
+            border: 1px solid black;
+            padding: 20px;
+            background: #eee;
+            position: fixed;
+            top: 20%;
+            left: 30%;
+            width: 40%;
+            z-index: 1000;
+        }
+        #popupOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 900;
+        }
+    </style>
 </head>
 <body>
+    <h1>Start Project</h1>
 
-<h1>Create a Project</h1>
+    <!-- Project Form -->
+    <form id="projectForm" method="post" action="{% url 'start_project' %}">
+        {% csrf_token %}
+        <label>Project Name:</label>
+        <input type="text" name="project_name" required><br>
 
-<form id="generate-form" method="post" action="{% url 'start_project' %}">
-    {% csrf_token %}
-    <label>Project Name:</label>
-    <input type="text" name="project_name" required><br>
+        <label>Description:</label>
+        <textarea name="description"></textarea><br>
 
-    <label>Description:</label>
-    <textarea name="description"></textarea><br>
+        <label>Number of Groups:</label>
+        <input type="number" name="num_groups" value="1" min="1" required><br>
 
-    <label>Number of Groups:</label>
-    <input type="number" name="num_groups" value="1" min="1" required><br>
+        <div id="group-fields"></div>
 
-    <div id="group-fields">
-        <!-- Group input fields will be inserted here -->
+        <button type="submit">Generate Excel</button>
+    </form>
+
+    <hr>
+
+    <h2>Upload Edited Excel File</h2>
+    <input type="file" id="excelFile" accept=".xlsx, .xlsm" />
+    <button id="uploadBtn">Upload</button>
+
+    <div id="popupOverlay"></div>
+    <div id="popup">
+        <h3>File Summary</h3>
+        <div id="fileSummary"></div>
+        <br>
+        <button id="confirmUpload">Looks Good</button>
+        <button id="cancelUpload">Edit File</button>
     </div>
 
-    <button type="submit">Generate Excel</button>
-</form>
-
-<script>
+    <script>
+    // Dynamic group input fields
     const numGroupsInput = document.querySelector('[name="num_groups"]');
     const groupFields = document.getElementById("group-fields");
 
     function updateGroupFields(count) {
-        groupFields.innerHTML = '';  // clear existing inputs
+        groupFields.innerHTML = '';
         for (let i = 1; i <= count; i++) {
             const label = document.createElement('label');
             label.textContent = `Group ${i} Name:`;
@@ -53,27 +88,69 @@
     });
 
     updateGroupFields(numGroupsInput.value);
-</script>
 
-<hr>
+    // File upload with preview
+    let fileResponseData = null;
 
-<form id="upload-form" method="post" enctype="multipart/form-data" action="{% url 'upload_data' %}">
-    {% csrf_token %}
-    <input type="file" name="excel_file" accept=".xlsx,.xlsm" required disabled id="upload-file">
-    <button type="submit" disabled id="upload-btn">Upload Edited Excel</button>
-</form>
+    $("#uploadBtn").on("click", function() {
+        let file = $("#excelFile")[0].files[0];
+        if (!file) { alert("Please select a file."); return; }
 
-<script>
-    const generateForm = document.getElementById('generate-form');
-    const uploadFile = document.getElementById('upload-file');
-    const uploadBtn = document.getElementById('upload-btn');
+        let formData = new FormData();
+        formData.append("file", file);
 
-    generateForm.addEventListener('submit', () => {
-        // Enable upload inputs immediately when generate is clicked
-        uploadFile.disabled = false;
-        uploadBtn.disabled = false;
+        $.ajax({
+            url: "{% url 'upload_preview' %}",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: { "X-CSRFToken": getCookie("csrftoken") },
+            success: function(response) {
+                fileResponseData = response;
+                $("#fileSummary").html(
+                    "<pre>" + JSON.stringify({
+                        message: response.message,
+                        independent_variables: response.independent_variables,
+                        possible_typos: response.possible_typos,
+                        num_groups: Object.keys(response.data).length
+                    }, null, 2) + "</pre>"
+                );
+                $("#popup, #popupOverlay").show();
+            },
+            error: function() { alert("Error uploading file."); }
+        });
     });
-</script>
 
+    $("#confirmUpload").on("click", function() {
+        $.ajax({
+            url: "{% url 'upload_project' %}",
+            type: "POST",
+            data: JSON.stringify({ file_response: fileResponseData }),
+            contentType: "application/json",
+            headers: { "X-CSRFToken": getCookie("csrftoken") },
+            success: function(resp) {
+                alert("Project data saved!");
+                $("#popup, #popupOverlay").hide();
+            },
+            error: function() { alert("Error saving project data."); }
+        });
+    });
+
+    $("#cancelUpload").on("click", function() {
+        $("#popup, #popupOverlay").hide();
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            document.cookie.split(';').forEach(function(cookie) {
+                const c = cookie.trim();
+                if (c.startsWith(name + '=')) cookieValue = decodeURIComponent(c.substring(name.length + 1));
+            });
+        }
+        return cookieValue;
+    }
+    </script>
 </body>
 </html>
