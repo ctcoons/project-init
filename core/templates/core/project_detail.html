@@ -1,0 +1,28 @@
+{% extends "core/base.html" %}
+{% block content %}
+<h1>{{ project.project_name }}</h1>
+<p>{{ project.description }}</p>
+<p>Groups: {{ project.group_names }}</p>
+
+<h2>Data:</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Group</th>
+            <th>Category</th>
+            <th>Label</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for gd in group_data %}
+        <tr>
+            <td>{{ gd.group_name }}</td>
+            <td>{{ gd.category }}</td>
+            <td>{{ gd.label }}</td>
+            <td>{{ gd.value }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

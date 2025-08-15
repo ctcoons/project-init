@@ -6,11 +6,9 @@ urlpatterns = [
     path('register/', views.register, name='register'),
 
     # Project views
-    path('projects/', views.project_list, name='project_list'),  # List of projects
-    path('projects/new/', views.create_project, name='create_project'),  # Create project
-    path('start-project/', views.start_project, name='start_project'),  # Generate/download Excel
-
-    # Excel upload flow
-    path('upload-preview/', views.upload_preview, name='upload_preview'),  # AJAX preview of uploaded Excel
-    path('upload-project/', views.upload_project, name='upload_project'),  # AJAX save project + group data
+    path("projects/", views.project_list, name="project_list"),
+    path("create-project/", views.start_project, name="start_project"),
+    path("upload-excel-preview/", views.upload_excel_preview, name="upload_excel_preview"),
+    path("upload-excel-confirm/", views.upload_excel_confirm, name="upload_excel_confirm"),
+    path("project/<int:project_id>/", views.project_detail, name="project_detail"),
 ]

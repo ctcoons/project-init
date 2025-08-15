@@ -1,156 +1,151 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Start Project</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        #popup {
-            display: none;
-            border: 1px solid black;
-            padding: 20px;
-            background: #eee;
-            position: fixed;
-            top: 20%;
-            left: 30%;
-            width: 40%;
-            z-index: 1000;
-        }
-        #popupOverlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 900;
-        }
-    </style>
-</head>
-<body>
-    <h1>Start Project</h1>
+{% extends "core/base.html" %}
+{% load static %}
+{% block content %}
 
-    <!-- Project Form -->
-    <form id="projectForm" method="post" action="{% url 'start_project' %}">
-        {% csrf_token %}
-        <label>Project Name:</label>
-        <input type="text" name="project_name" required><br>
-
-        <label>Description:</label>
-        <textarea name="description"></textarea><br>
-
-        <label>Number of Groups:</label>
-        <input type="number" name="num_groups" value="1" min="1" required><br>
-
-        <div id="group-fields"></div>
-
-        <button type="submit">Generate Excel</button>
-    </form>
-
-    <hr>
-
-    <h2>Upload Edited Excel File</h2>
-    <input type="file" id="excelFile" accept=".xlsx, .xlsm" />
-    <button id="uploadBtn">Upload</button>
-
-    <div id="popupOverlay"></div>
-    <div id="popup">
-        <h3>File Summary</h3>
-        <div id="fileSummary"></div>
-        <br>
-        <button id="confirmUpload">Looks Good</button>
-        <button id="cancelUpload">Edit File</button>
+<h1>Start Project</h1>
+<form method="post" id="projectForm">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="id_project_name">Project Name</label>
+        {{ form.project_name }}
+    </div>
+    <div class="mb-3">
+        <label for="id_description">Description</label>
+        {{ form.description }}
+    </div>
+    <div class="mb-3">
+        <label for="number_of_groups">Number of Groups</label>
+        <input type="number" id="number_of_groups" name="number_of_groups" min="1" value="1">
     </div>
 
-    <script>
-    // Dynamic group input fields
-    const numGroupsInput = document.querySelector('[name="num_groups"]');
-    const groupFields = document.getElementById("group-fields");
+    <div id="groupNamesContainer">
+        <div class="mb-2">
+            <label>Group 1</label>
+            <input type="text" name="group_1" class="form-control">
+        </div>
+    </div>
 
-    function updateGroupFields(count) {
-        groupFields.innerHTML = '';
-        for (let i = 1; i <= count; i++) {
-            const label = document.createElement('label');
-            label.textContent = `Group ${i} Name:`;
-            groupFields.appendChild(label);
+    <button type="submit" class="btn btn-primary">Start Project (Download Excel)</button>
+</form>
 
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.name = `group_${i}`;
-            groupFields.appendChild(input);
+<hr>
 
-            groupFields.appendChild(document.createElement('br'));
-        }
+<input type="file" id="excelFileInput" accept=".xls,.xlsx,.xlsm" disabled>
+<button id="uploadExcelBtn" class="btn btn-secondary" disabled>Upload Excel File</button>
+
+<!-- Summary Modal -->
+<div class="modal fade" id="summaryModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Excel Upload Summary</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Message:</strong> <span id="summaryMessage"></span></p>
+        <p><strong>Success:</strong> <span id="summarySuccess"></span></p>
+        <p><strong>Independent Variables:</strong> <span id="summaryIV"></span></p>
+        <p><strong>Typos:</strong> <span id="summaryTypos"></span></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="confirmUploadBtn" class="btn btn-success">Confirm</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const groupContainer = document.getElementById("groupNamesContainer");
+const numberInput = document.getElementById("number_of_groups");
+
+// Dynamic group input fields
+numberInput.addEventListener("input", () => {
+    const count = parseInt(numberInput.value) || 1;
+    groupContainer.innerHTML = "";
+    for (let i = 1; i <= count; i++) {
+        const div = document.createElement("div");
+        div.classList.add("mb-2");
+        div.innerHTML = `<label>Group ${i}</label><input type="text" name="group_${i}" class="form-control">`;
+        groupContainer.appendChild(div);
     }
+});
 
-    numGroupsInput.addEventListener("input", function () {
-        const value = Math.max(1, parseInt(this.value) || 1);
-        this.value = value;
-        updateGroupFields(value);
-    });
+// Enable file input/buttons after Excel download
+document.querySelector("form button[type='submit']").addEventListener("click", function() {
+    setTimeout(() => {
+        document.getElementById("excelFileInput").disabled = false;
+        document.getElementById("uploadExcelBtn").disabled = false;
+    }, 1000);
+});
 
-    updateGroupFields(numGroupsInput.value);
+// Upload Excel and show summary
+document.getElementById("uploadExcelBtn").addEventListener("click", function() {
+    const file = document.getElementById("excelFileInput").files[0];
+    if (!file) { alert("Select a file first."); return; }
 
-    // File upload with preview
-    let fileResponseData = null;
+    let formData = new FormData();
+    formData.append("file", file);
 
-    $("#uploadBtn").on("click", function() {
-        let file = $("#excelFile")[0].files[0];
-        if (!file) { alert("Please select a file."); return; }
+    fetch("{% url 'upload_excel_preview' %}", {
+        method: "POST",
+        body: formData,
+        headers: {"X-CSRFToken": "{{ csrf_token }}"}
+    })
+    .then(res => res.json())
+    .then(data => {
+        // Success and Message
+        document.getElementById("summarySuccess").innerText = data.success ? "Yes" : "No";
+        document.getElementById("summaryMessage").innerText = data.message;
 
-        let formData = new FormData();
-        formData.append("file", file);
-
-        $.ajax({
-            url: "{% url 'upload_preview' %}",
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: { "X-CSRFToken": getCookie("csrftoken") },
-            success: function(response) {
-                fileResponseData = response;
-                $("#fileSummary").html(
-                    "<pre>" + JSON.stringify({
-                        message: response.message,
-                        independent_variables: response.independent_variables,
-                        possible_typos: response.possible_typos,
-                        num_groups: Object.keys(response.data).length
-                    }, null, 2) + "</pre>"
-                );
-                $("#popup, #popupOverlay").show();
-            },
-            error: function() { alert("Error uploading file."); }
-        });
-    });
-
-    $("#confirmUpload").on("click", function() {
-        $.ajax({
-            url: "{% url 'upload_project' %}",
-            type: "POST",
-            data: JSON.stringify({ file_response: fileResponseData }),
-            contentType: "application/json",
-            headers: { "X-CSRFToken": getCookie("csrftoken") },
-            success: function(resp) {
-                alert("Project data saved!");
-                $("#popup, #popupOverlay").hide();
-            },
-            error: function() { alert("Error saving project data."); }
-        });
-    });
-
-    $("#cancelUpload").on("click", function() {
-        $("#popup, #popupOverlay").hide();
-    });
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            document.cookie.split(';').forEach(function(cookie) {
-                const c = cookie.trim();
-                if (c.startsWith(name + '=')) cookieValue = decodeURIComponent(c.substring(name.length + 1));
-            });
+        // Independent Variables
+        let ivContainer = document.getElementById("summaryIV");
+        ivContainer.innerHTML = "";
+        for (const variable in data.independent_variables) {
+            const values = data.independent_variables[variable];
+            const p = document.createElement("p");
+            p.innerText = `${variable}: ${values.join(", ")}`;
+            ivContainer.appendChild(p);
         }
-        return cookieValue;
-    }
-    </script>
-</body>
-</html>
+
+        // Possible Typos
+        let typosList = document.getElementById("summaryTypos");
+        typosList.innerHTML = "";
+        for (const typo in data.possible_typos) {
+            for (const suggestion in data.possible_typos[typo]) {
+                const locations = data.possible_typos[typo][suggestion];
+                const li = document.createElement("li");
+                li.innerText = `${typo} → ${suggestion} (Locations: ${locations.join(", ")})`;
+                typosList.appendChild(li);
+            }
+        }
+
+        // Show modal
+        new bootstrap.Modal(document.getElementById("summaryModal")).show();
+        uploadedFile = file;
+    });
+});
+
+// Confirm Upload
+document.getElementById("confirmUploadBtn").addEventListener("click", function() {
+    if (!uploadedFile) { alert("No file selected!"); return; }
+    const formData = new FormData();
+    formData.append("file", uploadedFile);
+
+    fetch("{% url 'upload_excel_confirm' %}", {
+        method: "POST",
+        body: formData,
+        headers: {"X-CSRFToken": "{{ csrf_token }}"}
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirect_url;
+        } else {
+            alert("Error: " + data.message);
+        }
+    });
+});
+</script>
+
+{% endblock %}

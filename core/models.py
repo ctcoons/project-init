@@ -20,7 +20,7 @@ class GroupData(models.Model):
     group_name = models.CharField(max_length=200)
     category = models.CharField(max_length=200)
     label = models.TextField()
-    value = models.TextField()
+    value = models.TextField(null=True)
 
     def __str__(self):
         return f"{self.group_name} | {self.category} | {self.label} = {self.value}"

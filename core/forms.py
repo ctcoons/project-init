@@ -15,10 +15,10 @@ class SignUpForm(UserCreationForm):
 class ProjectDataForm(forms.ModelForm):
     class Meta:
         model = ProjectData
-        fields = ['project_name', 'description', 'number_of_groups', 'group_names']
+        fields = ['project_name', 'description', 'number_of_groups']
         widgets = {
-            'group_names': forms.Textarea(attrs={'rows': 3}),
-            'description': forms.Textarea(attrs={'rows': 4}),
+            'project_name': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_project_name'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'id': 'id_description'}),
         }
 
 
