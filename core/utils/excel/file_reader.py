@@ -17,18 +17,33 @@ def tuple_to_str(tup: Tuple[int, int]) -> str:
 
 SPELL = SpellChecker()
 
+# ADD TERMS TO DICTIONARY THAT YOU DON'T WANT SPELL-CHECKED
+TECH_TERMS = {"MS1", "MS2", "AGC", "RF", "LCM"}
+
 
 def spell_check(word: str):
     if not word:
-        return word
+        return None
 
+    # Keep only letters, numbers, and spaces
     cleaned = re.sub(r'[^A-Za-z0-9 ]+', ' ', word)
-    cleaned = cleaned.split(" ")
-    res = ""
-    for clean in cleaned:
-        res = res + SPELL.correction(clean) + " "
+    words = cleaned.split()
 
-    return res.strip()
+    corrected_words = []
+
+    for w in words:
+        # Skip empty strings, numbers, and known technical terms
+        if not w or w.isnumeric() or w in TECH_TERMS:
+            continue
+
+        cor = SPELL.correction(w)
+        if cor != w:
+            corrected_words.append(cor)
+
+    if not corrected_words:
+        return None
+
+    return " ".join(corrected_words)
 
 
 def add_to_labels(

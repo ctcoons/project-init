@@ -123,7 +123,7 @@ document.getElementById("uploadExcelBtn").addEventListener("click", function() {
         document.getElementById("summaryMessage").innerText = data.message;
 
         // Independent Variables
-        let ivContainer = document.getElementById("summaryIV");
+        const ivContainer = document.getElementById("summaryIV");
         ivContainer.innerHTML = "";
         for (const variable in data.independent_variables) {
             const values = data.independent_variables[variable];
@@ -133,16 +133,18 @@ document.getElementById("uploadExcelBtn").addEventListener("click", function() {
         }
 
         // Possible Typos
-        let typosList = document.getElementById("summaryTypos");
+        const typosList = document.getElementById("summaryTypos");
         typosList.innerHTML = "";
-        for (const typo in data.possible_typos) {
-            for (const suggestion in data.possible_typos[typo]) {
-                const locations = data.possible_typos[typo][suggestion];
+        for (const column in data.typos) {  // changed from possible_typos
+            const fields = data.typos[column];
+            for (const field in fields) {
+                const locations = fields[field];
                 const li = document.createElement("li");
-                li.innerText = `${typo} → ${suggestion} (Locations: ${locations.join(", ")})`;
+                li.innerText = `${column} → ${field} (Locations: ${locations.join(", ")})`;
                 typosList.appendChild(li);
             }
         }
+
 
         // Show modal
         new bootstrap.Modal(document.getElementById("summaryModal")).show();
