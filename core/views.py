@@ -1,6 +1,8 @@
 import tempfile
 import json
 import os
+from collections import defaultdict
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -114,6 +116,8 @@ def upload_excel_preview(request):
             "groups": response.get_project_data().get_groups()
         }
         # Store the file response in session for confirmation
+        response_dict = make_json_safe(response_dict)
+
         request.session['file_response'] = response_dict
         return JsonResponse(response_dict)
 
@@ -160,3 +164,20 @@ def project_detail(request, project_id):
     project = get_object_or_404(ProjectData, id=project_id)
     group_data = project.group_data.all()  # Related name
     return render(request, "core/project_detail.html", {"project": project, "group_data": group_data})
+
+
+def make_json_safe(obj):
+    """
+    Recursively convert defaultdicts and other non-JSON-safe types
+    into regular dicts/lists/strings so they can be serialized by JsonResponse.
+    """
+    if isinstance(obj, defaultdict):
+        return {k: make_json_safe(v) for k, v in obj.items()}
+    elif isinstance(obj, dict):
+        return {k: make_json_safe(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [make_json_safe(v) for v in obj]
+    elif hasattr(obj, "__dict__"):  # for custom classes (like ProjectData)
+        return make_json_safe(obj.__dict__)
+    else:
+        return obj

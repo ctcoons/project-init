@@ -30,7 +30,29 @@
 <hr>
 
 <input type="file" id="excelFileInput" accept=".xls,.xlsx,.xlsm" disabled>
-<button id="uploadExcelBtn" class="btn btn-secondary" disabled>Upload Excel File</button>
+<button id="uploadExcelBtn" class="btn btn-secondary" disabled>
+    Upload Excel File
+    <span class="spinner" id="spinner"></span>
+</button>
+
+<style>
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 1s linear infinite;
+  display: none; /* hidden by default */
+  margin-left: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style>
+
 
 <!-- Summary Modal -->
 <div class="modal fade" id="summaryModal" tabindex="-1">
@@ -43,8 +65,8 @@
       <div class="modal-body">
         <p><strong>Message:</strong> <span id="summaryMessage"></span></p>
         <p><strong>Success:</strong> <span id="summarySuccess"></span></p>
-        <p><strong>Independent Variables:</strong> <span id="summaryIV"></span></p>
-        <p><strong>Typos:</strong> <span id="summaryTypos"></span></p>
+        <p><strong>Independent Variables:</strong></p><div id="summaryIV"></div>
+        <p><strong>Typos:</strong></p><ul id="summaryTypos"></ul>
       </div>
       <div class="modal-footer">
         <button type="button" id="confirmUploadBtn" class="btn btn-success">Confirm</button>
@@ -86,6 +108,9 @@ document.getElementById("uploadExcelBtn").addEventListener("click", function() {
     let formData = new FormData();
     formData.append("file", file);
 
+    document.getElementById("uploadExcelBtn").disabled = true;
+    document.getElementById("spinner").style.display = "inline-block";
+
     fetch("{% url 'upload_excel_preview' %}", {
         method: "POST",
         body: formData,
@@ -103,7 +128,7 @@ document.getElementById("uploadExcelBtn").addEventListener("click", function() {
         for (const variable in data.independent_variables) {
             const values = data.independent_variables[variable];
             const p = document.createElement("p");
-            p.innerText = `${variable}: ${values.join(", ")}`;
+            p.innerText = `(${variable}) ${values.join(", ")}`;
             ivContainer.appendChild(p);
         }
 
@@ -122,6 +147,10 @@ document.getElementById("uploadExcelBtn").addEventListener("click", function() {
         // Show modal
         new bootstrap.Modal(document.getElementById("summaryModal")).show();
         uploadedFile = file;
+    })
+    .then(() => {
+    document.getElementById("spinner").style.display = "none";
+    document.getElementById("uploadExcelBtn").disabled = false;
     });
 });
 

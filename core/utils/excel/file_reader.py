@@ -5,6 +5,7 @@ from .file_reader_response import FileReaderResponse
 from .project_data import FileReaderProjectData
 from spellchecker import SpellChecker
 from openpyxl import load_workbook
+import re
 
 
 def tuple_to_str(tup: Tuple[int, int]) -> str:
@@ -18,12 +19,16 @@ SPELL = SpellChecker()
 
 
 def spell_check(word: str):
-    word = str(word)
-    corrected = SPELL.correction(word)
-    # Only return if corrected is different
-    if corrected != word:
-        return corrected
-    return None
+    if not word:
+        return word
+
+    cleaned = re.sub(r'[^A-Za-z0-9 ]+', ' ', word)
+    cleaned = cleaned.split(" ")
+    res = ""
+    for clean in cleaned:
+        res = res + SPELL.correction(clean) + " "
+
+    return res.strip()
 
 
 def add_to_labels(
@@ -103,7 +108,7 @@ class FileReader:
         file_path: str
     ) -> FileReaderResponse:
         success = True
-        message = ""
+        message = "Data Read Successfully!"
 
         # {Data_Tag: [Values]}
         independent_variables: Dict[str, List[str]] = defaultdict(list)
