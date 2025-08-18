@@ -1,18 +1,34 @@
+import csv
+import io
 import tempfile
 import json
 import os
 from collections import defaultdict
+from functools import wraps
 
+from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
-from django.http import FileResponse, JsonResponse
-from .forms import SignUpForm, ProjectDataForm, UploadExcelForm
-from .models import ProjectData, GroupData
+from django.http import FileResponse, JsonResponse, HttpResponseForbidden
+from openpyxl.pivot.cache import GroupItems
+
+from .forms import SignUpForm, ProjectDataForm, UploadExcelForm, CSVUploadForm, SubjectSelectionForm
+from .models import ProjectData, GroupData, GroupSubData, Subject
 from core.utils.excel.excel_file_generation import ExcelFileGenerator
 from core.utils.excel.project_data import FileReaderProjectData as ExcelProjectData
 from .utils.excel.file_reader import FileReader, FileReaderResponse
+
+
+def project_owner_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, project_id, *args, **kwargs):
+        project = get_object_or_404(ProjectData, id=project_id)
+        if project.owner != request.user:
+            return HttpResponseForbidden("You are not allowed to access this project.")
+        return view_func(request, project_id, *args, **kwargs)
+    return _wrapped_view
 
 
 # ----------------- User registration & home -----------------
@@ -136,18 +152,28 @@ def upload_excel_confirm(request):
 
         project_model = get_object_or_404(ProjectData, id=project_id)
         data = file_response.get("data", {})
+        independent_variables = file_response.get("independent_variables", {})
 
         # Save each group/category/label/value
         for group_name, categories in data.items():
+            group_instance = GroupData.objects.create(
+                project=project_model,
+                group_name=group_name
+            )
             for category_name, labels in categories.items():
                 for label, value in labels.items():
-                    GroupData.objects.create(
-                        project=project_model,
-                        group_name=group_name,
+                    GroupSubData.objects.create(
+                        group=group_instance,
                         category=category_name,
                         label=label,
                         value=value
                     )
+
+        if independent_variables:
+            project_model.independent_variable = {
+                str(k): list(map(str, v)) for k, v in independent_variables.items()
+            }
+            project_model.save()
 
         # Clear session
         del request.session['pending_project_id']
@@ -181,3 +207,59 @@ def make_json_safe(obj):
         return make_json_safe(obj.__dict__)
     else:
         return obj
+
+
+# ----------------- Add Subject Data -----------------
+@project_owner_required
+@login_required
+def add_subject_data(request, project_id):
+    project = get_object_or_404(ProjectData, id=project_id)
+    groups = project.group_data.all()
+
+    subjects = request.session.get("subjects_preview", [])
+
+    # Step 1: Upload CSV
+    if request.method == "POST" and "upload_csv" in request.POST:
+        form = CSVUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            file = form.cleaned_data["file"]
+            decoded = file.read().decode("utf-8")
+            import csv, io
+            reader = csv.DictReader(io.StringIO(decoded))
+            subjects = list(reader)
+            request.session["subjects_preview"] = subjects
+            selection_form = SubjectSelectionForm(groups=groups, subjects=subjects)
+        else:
+            selection_form = None
+
+    # Step 2: Add selected subjects
+    elif request.method == "POST" and "add_subjects" in request.POST:
+        selection_form = SubjectSelectionForm(request.POST, groups=groups, subjects=subjects)
+        if selection_form.is_valid():
+            group_id = selection_form.cleaned_data["group"]
+            selected_indexes = selection_form.cleaned_data["subjects"]
+            group = get_object_or_404(GroupData, id=group_id)
+            added = 0
+
+            for idx in selected_indexes:
+                data = subjects[int(idx)]
+                Subject.objects.create(group=group, metadata=data)
+                added += 1
+
+            # Update session to remove added subjects
+            subjects = [s for i, s in enumerate(subjects) if str(i) not in selected_indexes]
+            request.session["subjects_preview"] = subjects
+
+            messages.success(request, f"Successfully added {added} subjects to {group.group_name}.")
+            return redirect("add_subject_data", project_id=project.id)
+    else:
+        # GET request
+        selection_form = None if not subjects else SubjectSelectionForm(groups=groups, subjects=subjects)
+
+    return render(request, "core/add_subject_data.html", {
+        "project": project,
+        "upload_form": CSVUploadForm(),
+        "selection_form": selection_form,
+        "subjects": subjects,
+    })
+

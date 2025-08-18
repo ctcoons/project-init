@@ -10,7 +10,7 @@ import re
 
 def tuple_to_str(tup: Tuple[int, int]) -> str:
     ntl = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    resp = ntl[tup[1] + 1]
+    resp = ntl[tup[1] - 1]
     resp += str(tup[0])
     return resp
 
@@ -25,6 +25,7 @@ def spell_check(word: str):
     if not word:
         return None
 
+    word = str(word)
     # Keep only letters, numbers, and spaces
     cleaned = re.sub(r'[^A-Za-z0-9 ]+', ' ', word)
     words = cleaned.split()

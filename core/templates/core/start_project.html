@@ -150,9 +150,13 @@ document.getElementById("uploadExcelBtn").addEventListener("click", function() {
         new bootstrap.Modal(document.getElementById("summaryModal")).show();
         uploadedFile = file;
     })
-    .then(() => {
-    document.getElementById("spinner").style.display = "none";
-    document.getElementById("uploadExcelBtn").disabled = false;
+    .catch(error => {
+        console.error("Error uploading Excel:", error);
+        alert("There was an error uploading the file. Please try again.");
+    })
+    .finally(() => {
+        document.getElementById("spinner").style.display = "none";
+        document.getElementById("uploadExcelBtn").disabled = false;
     });
 });
 

@@ -1,0 +1,84 @@
+{% extends "core/base.html" %}
+{% load custom_filters %}
+
+{% block content %}
+<h2>Add Subject Data for {{ project.project_name }}</h2>
+
+{% if request.user == project.owner %}
+    <!-- Step 1: Upload CSV -->
+    <form method="post" enctype="multipart/form-data" class="mb-4">
+        {% csrf_token %}
+        {{ upload_form.as_p }}
+        <button type="submit" name="upload_csv" class="btn btn-primary">Upload CSV</button>
+    </form>
+{% else %}
+    <p>You are not allowed to add subjects to this project.</p>
+{% endif %}
+
+{% if subjects %}
+    <!-- Step 2: Select Subjects to Add -->
+    <form method="post" id="subjectForm">
+        {% csrf_token %}
+        <div class="mb-3">
+            {{ selection_form.group.label_tag }} {{ selection_form.group }}
+        </div>
+
+        <h3 id="subjectCounter">Add "0" Subjects to Selected Group</h3>
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    {% for key in subjects.0.keys %}
+                        <th>{{ key }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for subject, checkbox in subjects|zip_lists:selection_form.subjects %}
+                <tr data-bs-toggle="collapse" data-bs-target="#subject-{{ forloop.counter }}" style="cursor: pointer;">
+                    <td>{{ checkbox }}</td>
+                    {% for value in subject.values %}
+                        <td>{{ value }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <button type="submit" name="add_subjects" class="btn btn-success">Add Selected Subjects</button>
+    </form>
+{% else %}
+    <p>No subjects uploaded yet. Please upload a CSV to see the preview.</p>
+{% endif %}
+
+{% if messages %}
+<ul class="mt-3">
+    {% for message in messages %}
+        <li>{{ message }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const checkboxes = document.querySelectorAll("input[type=checkbox]");
+    const counter = document.getElementById("subjectCounter");
+
+    function updateCounter() {
+        const selectedCount = document.querySelectorAll("input[type=checkbox]:checked").length;
+        const groupSelect = document.querySelector("select[name=group]");
+        const groupName = groupSelect ? groupSelect.options[groupSelect.selectedIndex].text : "Group";
+        counter.textContent = `Add "${selectedCount}" Subjects to "${groupName}"`;
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener("change", updateCounter));
+    const groupSelect = document.querySelector("select[name=group]");
+    if (groupSelect) groupSelect.addEventListener("change", updateCounter);
+
+    updateCounter();
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

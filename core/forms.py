@@ -24,3 +24,19 @@ class ProjectDataForm(forms.ModelForm):
 
 class UploadExcelForm(forms.Form):
     excel_file = forms.FileField(label="Upload Completed Excel File")
+
+
+class CSVUploadForm(forms.Form):
+    file = forms.FileField(label="Upload CSV")
+
+
+class SubjectSelectionForm(forms.Form):
+    group = forms.ChoiceField(choices=[], required=True)
+    subjects = forms.MultipleChoiceField(widget=forms.CheckboxSelectMultiple, required=False)
+
+    def __init__(self, *args, **kwargs):
+        groups = kwargs.pop("groups", [])
+        subjects = kwargs.pop("subjects", [])
+        super().__init__(*args, **kwargs)
+        self.fields["group"].choices = [(g.id, g.group_name) for g in groups]
+        self.fields["subjects"].choices = [(i, f"Row {i+1}") for i, _ in enumerate(subjects)]

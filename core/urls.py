@@ -11,4 +11,5 @@ urlpatterns = [
     path("upload-excel-preview/", views.upload_excel_preview, name="upload_excel_preview"),
     path("upload-excel-confirm/", views.upload_excel_confirm, name="upload_excel_confirm"),
     path("project/<int:project_id>/", views.project_detail, name="project_detail"),
+    path("project/<int:project_id>/add-subject-data/", views.add_subject_data, name="add_subject_data"),
 ]

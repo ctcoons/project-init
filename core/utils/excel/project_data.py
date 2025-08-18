@@ -24,16 +24,13 @@ class FileReaderProjectData:
         assert new_name is str
         self.name = new_name
 
-
     def set_owner(self, new_owner: str):
         assert new_owner is str
         self.owner = new_owner
 
-
     def set_groups(self, groups: list):
         assert groups is list
         self.groups = groups
-
 
     def __str__(self):
         return f"ProjectData(name='{self.name}', owner='{self.owner}', groups={self.groups})"
