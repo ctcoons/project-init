@@ -1,6 +1,7 @@
 {% extends "core/base.html" %}
 {% load static %}
 {% block content %}
+
 <h1>Start Project</h1>
 <form method="post" id="projectForm">
     {% csrf_token %}
