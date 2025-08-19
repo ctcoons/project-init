@@ -1,7 +1,3 @@
-import csv
-import io
-import tempfile
-import json
 import os
 from collections import defaultdict
 from functools import wraps
@@ -12,10 +8,9 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import FileResponse, JsonResponse, HttpResponseForbidden
-from openpyxl.pivot.cache import GroupItems
 
-from .forms import SignUpForm, ProjectDataForm, UploadExcelForm, CSVUploadForm, SubjectSelectionForm
-from .models import ProjectData, GroupData, GroupSubData, Subject
+from .forms import SignUpForm, ProjectDataForm, CSVUploadForm, SubjectSelectionForm, ProjectFileForm
+from .models import ProjectData, GroupData, GroupSubData, Subject, ProjectFile
 from core.utils.excel.excel_file_generation import ExcelFileGenerator
 from core.utils.excel.project_data import FileReaderProjectData as ExcelProjectData
 from .utils.excel.file_reader import FileReader, FileReaderResponse
@@ -200,6 +195,49 @@ def project_detail(request, project_id):
             "subjects": subjects,
         },
     )
+# ----------------- View, Add, and Delete Files -----------------
+
+
+@login_required
+def view_files(request, project_id):
+    project = get_object_or_404(ProjectData, id=project_id)
+
+    # Owner sees all, others see only public
+    if request.user == project.owner:
+        files = project.files.all()
+    else:
+        files = project.files.filter(visibility="public")
+
+    form = None
+    if request.user == project.owner:
+        if request.method == "POST":
+            form = ProjectFileForm(request.POST, request.FILES)
+            if form.is_valid():
+                new_file = form.save(commit=False)
+                new_file.project = project
+                new_file.uploaded_by = request.user
+                new_file.save()
+                return redirect("view_files", project_id=project.id)
+        else:
+            form = ProjectFileForm()
+
+    return render(request, "core/view_files.html", {
+        "project": project,
+        "files": files,
+        "form": form,
+    })
+
+
+@project_owner_required
+@login_required
+def delete_file(request, project_id, file_id):
+    file = get_object_or_404(ProjectFile, id=file_id)
+    if request.user == file.project.owner:
+        if file.file:
+            file.file.delete()
+        file.delete()
+    return redirect("view_files", project_id=project_id)
+
 
 def make_json_safe(obj):
     """

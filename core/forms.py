@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import ProjectData
+from .models import ProjectData, ProjectFile
 
 
 class SignUpForm(UserCreationForm):
@@ -40,3 +40,9 @@ class SubjectSelectionForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields["group"].choices = [(g.id, g.group_name) for g in groups]
         self.fields["subjects"].choices = [(i, f"Row {i+1}") for i, _ in enumerate(subjects)]
+
+
+class ProjectFileForm(forms.ModelForm):
+    class Meta:
+        model = ProjectFile
+        fields = ["file", "visibility"]
