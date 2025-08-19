@@ -24,7 +24,16 @@
         {% for project in projects %}
         <tr style="cursor: pointer;" onclick="window.location='{% url 'project_detail' project.id %}';">
           <td>{{ project.owner.username }}</td>
-          <td>{{ project.project_name }}</td>
+          <td>
+            {{ project.project_name }}
+            <span
+              class="ms-2 text-muted"
+              data-bs-toggle="tooltip"
+              data-bs-placement="top"
+              title="{{ project.description|truncatechars:100|default:'No description provided' }}">
+              <i class="bi bi-question-circle"></i>
+            </span>
+          </td>
           <td>{{ project.created_at|date:"M d, Y" }}</td>
         </tr>
         {% empty %}
@@ -45,7 +54,10 @@
 
 </div>
 
-<!-- Client-side Search + Pagination -->
+<!-- Bootstrap Icons (for the question mark icon) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+<!-- Client-side Search + Pagination + Tooltip Init -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const rows = Array.from(document.querySelectorAll("#projectsTable tbody tr"));
@@ -104,6 +116,12 @@ document.addEventListener("DOMContentLoaded", function () {
     searchCreator.addEventListener("input", () => { currentPage = 1; renderTable(); });
 
     renderTable();
+
+    // Enable Bootstrap tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
 });
 </script>
 {% endblock %}

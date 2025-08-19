@@ -188,9 +188,18 @@ def upload_excel_confirm(request):
 @login_required
 def project_detail(request, project_id):
     project = get_object_or_404(ProjectData, id=project_id)
-    group_data = project.group_data.all()  # Related name
-    return render(request, "core/project_detail.html", {"project": project, "group_data": group_data})
+    group_data = project.group_data.all()  # all groups in this project
+    subjects = Subject.objects.filter(group__project=project)  # all subjects linked to this project
 
+    return render(
+        request,
+        "core/project_detail.html",
+        {
+            "project": project,
+            "group_data": group_data,
+            "subjects": subjects,
+        },
+    )
 
 def make_json_safe(obj):
     """
