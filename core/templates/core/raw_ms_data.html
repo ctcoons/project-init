@@ -1,0 +1,16 @@
+{% extends "core/base.html" %}
+{% block content %}
+<h2>RAW MS Data for {{ project.project_name }}</h2>
+<div class="my-3">
+    <a href="{% url 'project_detail' project.id %}">
+        <button class="btn btn-primary me-2">&#x2190; Back</button>
+    </a>
+    <a href="#">
+        <button class="btn btn-primary me-2">Select Runs To Add To Your Project</button>
+    </a>
+    <a href="#">
+        <button class="btn btn-primary">Generate Worklist</button>
+    </a>
+</div>
+
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block content %}
+<h1>Project Settings: {{ project.project_name }}</h1>
+
+<a href="{% url 'project_detail' project.id %}">
+    <button class="btn btn-primary">&#x2190; Back</button>
+</a>
+
+<hr>
+
+<h2>Update Project Info</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" name="save_project">Save Changes</button>
+</form>
+
+<hr>
+
+<h2>Collaborators</h2>
+<ul>
+    <li><strong>Owner:</strong> {{ project.owner.username }}</li>
+    {% for collab in collaborators %}
+        <li>{{ collab.user.username }} - {{ collab.role }}</li>
+    {% empty %}
+        <li>No collaborators yet.</li>
+    {% endfor %}
+</ul>
+
+<h3>Invite a Collaborator</h3>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" name="generate_invite">Generate Invite Link</button>
+</form>
+
+{% if invite_link %}
+    <p>Copy this link and share it with your collaborator:</p>
+    <input type="text" value="{{ invite_link }}" readonly style="width:100%;" onclick="this.select()">
+{% endif %}
+
+<hr>
+
+<h2>Delete Project</h2>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" name="delete_project" onclick="return confirm('Are you sure you want to delete this project?');">
+        Delete Project
+    </button>
+</form>
+{% endblock %}

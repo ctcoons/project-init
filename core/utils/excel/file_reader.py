@@ -1,4 +1,5 @@
 from collections import defaultdict
+from os.path import devnull
 from typing import Dict, Tuple, List
 from openpyxl.worksheet.worksheet import Worksheet
 from .file_reader_response import FileReaderResponse
@@ -18,14 +19,22 @@ def tuple_to_str(tup: Tuple[int, int]) -> str:
 SPELL = SpellChecker()
 
 # ADD TERMS TO DICTIONARY THAT YOU DON'T WANT SPELL-CHECKED
-TECH_TERMS = {"MS1", "MS2", "AGC", "RF", "LCM"}
+TECH_TERMS = {"MS1", "MS2", "AGC", "RF", "LCM", "N/A", "DDA", "Homo", "sapiens",
+              "HeLa", "tryptic", "ng", "pipetting", "Lys-C", "mM", "mm", "aliquoted",
+              "DDA"}
+
+checked = defaultdict(str)
 
 
 def spell_check(word: str):
     if not word:
         return None
 
-    word = str(word)
+    word = str(word).strip()
+
+    if word in checked:
+        return checked[word]
+
     # Keep only letters, numbers, and spaces
     cleaned = re.sub(r'[^A-Za-z0-9 ]+', ' ', word)
     words = cleaned.split()
@@ -34,16 +43,19 @@ def spell_check(word: str):
 
     for w in words:
         # Skip empty strings, numbers, and known technical terms
-        if not w or w.isnumeric() or w in TECH_TERMS:
+        if not w or w in TECH_TERMS:
+            continue
+        if any(char.isdigit() for char in w):
             continue
 
         cor = SPELL.correction(w)
-        if cor != w:
+        if cor and cor != w:
             corrected_words.append(cor)
 
     if not corrected_words:
         return None
 
+    checked[word] = " ".join(corrected_words)
     return " ".join(corrected_words)
 
 

@@ -1,29 +1,44 @@
 import os
+import uuid
 from collections import defaultdict
 from functools import wraps
 
 from django.contrib import messages
+from django.core.mail import send_mail
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import FileResponse, JsonResponse, HttpResponseForbidden
 
-from .forms import SignUpForm, ProjectDataForm, CSVUploadForm, SubjectSelectionForm, ProjectFileForm
-from .models import ProjectData, GroupData, GroupSubData, Subject, ProjectFile
+from .forms import SignUpForm, ProjectDataForm, CSVUploadForm, SubjectSelectionForm, ProjectFileForm, \
+    ProjectSettingsForm
+from .models import ProjectData, GroupData, GroupSubData, Subject, ProjectFile, ProjectMembership, \
+    ProjectJoinToken
 from core.utils.excel.excel_file_generation import ExcelFileGenerator
 from core.utils.excel.project_data import FileReaderProjectData as ExcelProjectData
 from .utils.excel.file_reader import FileReader, FileReaderResponse
 
 
-def project_owner_required(view_func):
-    @wraps(view_func)
-    def _wrapped_view(request, project_id, *args, **kwargs):
-        project = get_object_or_404(ProjectData, id=project_id)
-        if project.owner != request.user:
-            return HttpResponseForbidden("You are not allowed to access this project.")
-        return view_func(request, project_id, *args, **kwargs)
-    return _wrapped_view
+# ----------------- Decorators -----------------
+def project_role_required(allowed_roles):
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, project_id, *args, **kwargs):
+            project = get_object_or_404(ProjectData, id=project_id)
+            membership = ProjectMembership.objects.filter(user=request.user, project=project).first()
+
+            # Owners always have full access
+            if project.owner == request.user:
+                return view_func(request, project_id, *args, **kwargs)
+
+            if membership is None or membership.role not in allowed_roles:
+                return HttpResponseForbidden("You don't have permission to do this.")
+
+            return view_func(request, project_id, *args, **kwargs)
+
+        return _wrapped_view
+    return decorator
 
 
 # ----------------- User registration & home -----------------
@@ -193,11 +208,12 @@ def project_detail(request, project_id):
             "project": project,
             "group_data": group_data,
             "subjects": subjects,
+            "can_edit": project.can_edit(request.user),
         },
     )
+
+
 # ----------------- View, Add, and Delete Files -----------------
-
-
 @login_required
 def view_files(request, project_id):
     project = get_object_or_404(ProjectData, id=project_id)
@@ -209,17 +225,16 @@ def view_files(request, project_id):
         files = project.files.filter(visibility="public")
 
     form = None
-    if request.user == project.owner:
-        if request.method == "POST":
-            form = ProjectFileForm(request.POST, request.FILES)
-            if form.is_valid():
-                new_file = form.save(commit=False)
-                new_file.project = project
-                new_file.uploaded_by = request.user
-                new_file.save()
-                return redirect("view_files", project_id=project.id)
-        else:
-            form = ProjectFileForm()
+    if project.can_edit(request.user) and request.method == "POST":
+        form = ProjectFileForm(request.POST, request.FILES)
+        if form.is_valid():
+            new_file = form.save(commit=False)
+            new_file.project = project
+            new_file.uploaded_by = request.user
+            new_file.save()
+            return redirect("view_files", project_id=project.id)
+    elif project.can_edit(request.user):
+        form = ProjectFileForm()
 
     return render(request, "core/view_files.html", {
         "project": project,
@@ -228,7 +243,7 @@ def view_files(request, project_id):
     })
 
 
-@project_owner_required
+@project_role_required(["collaborator"])
 @login_required
 def delete_file(request, project_id, file_id):
     file = get_object_or_404(ProjectFile, id=file_id)
@@ -239,25 +254,30 @@ def delete_file(request, project_id, file_id):
     return redirect("view_files", project_id=project_id)
 
 
-def make_json_safe(obj):
-    """
-    Recursively convert defaultdicts and other non-JSON-safe types
-    into regular dicts/lists/strings so they can be serialized by JsonResponse.
-    """
-    if isinstance(obj, defaultdict):
-        return {k: make_json_safe(v) for k, v in obj.items()}
-    elif isinstance(obj, dict):
-        return {k: make_json_safe(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [make_json_safe(v) for v in obj]
-    elif hasattr(obj, "__dict__"):  # for custom classes (like ProjectData)
-        return make_json_safe(obj.__dict__)
-    else:
-        return obj
+# ----------------- View, Add, and Delete Subject Data -----------------
+@project_role_required(["collaborator"])
+@login_required
+def subject_data_page(request, project_id):
+    project = get_object_or_404(ProjectData, id=project_id)
+    subjects = Subject.objects.filter(group__project=project).select_related("group")
+    # Check if user is owner or collaborator
+    is_authorized = (
+        request.user == project.owner or
+        ProjectMembership.objects.filter(
+            project=project,
+            user=request.user,
+            role="collaborator"
+        ).exists()
+    )
+
+    return render(request, "core/subject_data.html", {
+        "project": project,
+        "subjects": subjects,
+        "is_authorized": is_authorized,
+    })
 
 
-# ----------------- Add Subject Data -----------------
-@project_owner_required
+@project_role_required(["collaborator"])
 @login_required
 def add_subject_data(request, project_id):
     project = get_object_or_404(ProjectData, id=project_id)
@@ -269,7 +289,7 @@ def add_subject_data(request, project_id):
     if request.method == "POST" and "upload_csv" in request.POST:
         form = CSVUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            file = form.cleaned_data["file"]
+            file = form.cleaned_data["csv_file"]
             decoded = file.read().decode("utf-8")
             import csv, io
             reader = csv.DictReader(io.StringIO(decoded))
@@ -310,3 +330,118 @@ def add_subject_data(request, project_id):
         "subjects": subjects,
     })
 
+
+@project_role_required(["collaborator"])
+@login_required
+def delete_subject(request, project_id, subject_id):
+    project = get_object_or_404(ProjectData, id=project_id)
+
+    # Only project owner or collaborators can delete
+    if not (request.user == project.owner or project.collaborators.filter(id=request.user.id).exists()):
+        return HttpResponseForbidden("You do not have permission to delete this subject.")
+
+    subject = get_object_or_404(Subject, id=subject_id, group__project=project)
+
+    if request.method == "POST":
+        subject.delete()
+        messages.success(request, "Subject deleted successfully.")
+        return redirect("subject_data", project_id=project.id)
+
+    # If accessed via GET, just redirect back
+    return redirect("subject_data", project_id=project.id)
+
+
+# ----------------- Project Settings -----------------
+@project_role_required([])
+@login_required
+def project_settings(request, project_id):
+    project = get_object_or_404(ProjectData, id=project_id)
+
+    if project.owner != request.user:
+        return HttpResponseForbidden("Only the project owner can access project settings.")
+
+    form = ProjectSettingsForm(instance=project)
+    invite_link = None
+
+    if request.method == 'POST':
+        if 'save_project' in request.POST:
+            form = ProjectSettingsForm(request.POST, instance=project)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Project updated successfully.")
+                return redirect('project_settings', project_id=project.id)
+        elif 'delete_project' in request.POST:
+            project.delete()
+            messages.success(request, "Project deleted successfully.")
+            return redirect('project_list')
+        elif 'generate_invite' in request.POST:
+            join_token = ProjectJoinToken.objects.create(project=project)
+            invite_link = request.build_absolute_uri(f"/project/{project.id}/join/{join_token.token}/")
+
+
+    collaborators = ProjectMembership.objects.filter(project=project)
+
+    return render(request, 'core/project_settings.html', {
+        'project': project,
+        'form': form,
+        'collaborators': collaborators,
+        'invite_link': invite_link,
+    })
+
+
+# ----------------- Receive Invite Link And Join -----------------
+@login_required
+def join_project(request, project_id, token):
+    project = get_object_or_404(ProjectData, id=project_id)
+
+    # Check the token
+    try:
+        join_token = ProjectJoinToken.objects.get(project=project, token=token)
+    except ProjectJoinToken.DoesNotExist:
+        messages.error(request, "This invite link is invalid or has already been used.")
+        return redirect('project_list')
+
+    # Check if user is already a member
+    if ProjectMembership.objects.filter(user=request.user, project=project).exists():
+        messages.info(request, "You are already a member of this project.")
+        join_token.delete()  # remove token even if already a member
+        return redirect('project_detail', project_id=project.id)
+
+    # Add the user as a collaborator
+    ProjectMembership.objects.create(user=request.user, project=project, role='collaborator')
+    join_token.delete()  # consume the token
+
+    messages.success(request, f"You have been added as a collaborator to '{project.project_name}'.")
+    return redirect('project_detail', project_id=project.id)
+
+
+# ----------------- About Page -----------------
+@login_required
+def project_about(request, project_id):
+    project = get_object_or_404(ProjectData, id=project_id)
+    return render(request, "core/about.html", {"project": project})
+
+
+# ----------------- About Page -----------------
+@login_required
+def raw_ms_data(request, project_id):
+    project = get_object_or_404(ProjectData, id=project_id)
+    return render(request, "core/raw_ms_data.html", {"project": project})
+
+
+# ----------------- Make Json Safe -----------------
+def make_json_safe(obj):
+    """
+    Recursively convert defaultdicts and other non-JSON-safe types
+    into regular dicts/lists/strings so they can be serialized by JsonResponse.
+    """
+    if isinstance(obj, defaultdict):
+        return {k: make_json_safe(v) for k, v in obj.items()}
+    elif isinstance(obj, dict):
+        return {k: make_json_safe(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [make_json_safe(v) for v in obj]
+    elif hasattr(obj, "__dict__"):  # for custom classes (like ProjectData)
+        return make_json_safe(obj.__dict__)
+    else:
+        return obj

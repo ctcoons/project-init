@@ -1,0 +1,31 @@
+{% extends "core/base.html" %}
+{% block content %}
+<h2>Files for {{ project.project_name }}</h2>
+
+ <a href="{% url 'project_detail' project.id %}" class="btn btn-primary mb-3">
+     Return To Project
+ </a>
+
+<ul>
+  {% for file in files %}
+    <li>
+      <a href="{{ file.file.url }}">{{ file.file.name }}</a>
+      {% if request.user == project.owner %}
+        ({{ file.visibility }})
+        <a href="{% url 'delete_file' project.id file.id %}">Delete</a>
+      {% endif %}
+    </li>
+  {% empty %}
+    <li>No files yet.</li>
+  {% endfor %}
+</ul>
+
+{% if request.user == project.owner %}
+  <h3>Upload New File</h3>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload</button>
+  </form>
+{% endif %}
+{% endblock %}

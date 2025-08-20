@@ -27,7 +27,10 @@ class UploadExcelForm(forms.Form):
 
 
 class CSVUploadForm(forms.Form):
-    file = forms.FileField(label="Upload CSV")
+    csv_file = forms.FileField(
+        label="Select CSV file",
+        widget=forms.ClearableFileInput(attrs={'accept': '.csv'})
+    )
 
 
 class SubjectSelectionForm(forms.Form):
@@ -46,3 +49,13 @@ class ProjectFileForm(forms.ModelForm):
     class Meta:
         model = ProjectFile
         fields = ["file", "visibility"]
+
+
+class ProjectSettingsForm(forms.ModelForm):
+    class Meta:
+        model = ProjectData
+        fields = ['project_name']
+        widgets = {
+            'project_name': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+

@@ -1,151 +1,125 @@
 {% extends "core/base.html" %}
 {% load static %}
+
 {% block content %}
+<div class="container text-center my-4">
 
-<h1>Start Project</h1>
-<form method="post" id="projectForm">
-    {% csrf_token %}
-    <div class="mb-3">
-        <label for="id_project_name">Project Name</label>
-        {{ form.project_name }}
-    </div>
-    <div class="mb-3">
-        <label for="id_description">Description</label>
-        {{ form.description }}
-    </div>
-    <div class="mb-3">
-        <label for="number_of_groups">Number of Groups</label>
-        <input type="number" id="number_of_groups" name="number_of_groups" min="1" value="1">
-    </div>
+  <!-- Project Title -->
+  <h1>{{ project.project_name }}</h1>
+  <hr>
 
-    <div id="groupNamesContainer">
-        <div class="mb-2">
-            <label>Group 1</label>
-            <input type="text" name="group_1" class="form-control">
+  <!-- Owner and description -->
+  <p class="text-muted">By {{ project.owner.username }}</p>
+  <p class="mx-auto" style="max-width: 700px;">
+    {{ project.description }}
+  </p>
+  <hr>
+
+  <!-- Icon Grid -->
+  <div class="row row-cols-1 row-cols-md-3 g-4 justify-content-center">
+
+    <!-- Info -->
+    <div class="col">
+      <a href="{% url 'project_about' project.id %}" class="text-decoration-none">
+        <div class="icon-tile" data-bs-toggle="tooltip" data-bs-placement="top" title="About This Project">
+          <i class="bi bi-info-circle"></i>
         </div>
+      </a>
     </div>
 
-    <button type="submit" class="btn btn-primary">Start Project (Download Excel)</button>
-</form>
-
-<hr>
-
-<input type="file" id="excelFileInput" accept=".xls,.xlsx,.xlsm" disabled>
-<button id="uploadExcelBtn" class="btn btn-secondary" disabled>Upload Excel File</button>
-
-<!-- Summary Modal -->
-<div class="modal fade" id="summaryModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Excel Upload Summary</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p><strong>Message:</strong> <span id="summaryMessage"></span></p>
-        <p><strong>Success:</strong> <span id="summarySuccess"></span></p>
-        <p><strong>Independent Variables:</strong> <span id="summaryIV"></span></p>
-        <p><strong>Typos:</strong> <span id="summaryTypos"></span></p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" id="confirmUploadBtn" class="btn btn-success">Confirm</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-      </div>
+    <!-- Data -->
+    <div class="col">
+      <a href="#" class="text-decoration-none">
+        <div class="icon-tile" data-bs-toggle="tooltip" data-bs-placement="top" title="RAW MS Data">
+          <i class="bi bi-bar-chart"></i>
+        </div>
+      </a>
     </div>
+
+    <!-- Analysis -->
+    <div class="col">
+      <a href="#" class="text-decoration-none">
+        <div class="icon-tile" data-bs-toggle="tooltip" data-bs-placement="top" title="Visualization">
+          <i class="bi bi-pie-chart"></i>
+        </div>
+      </a>
+    </div>
+
+    <!-- Files -->
+    <div class="col">
+      <a href="{% url 'view_files' project.id %}" class="text-decoration-none">
+        <div class="icon-tile" data-bs-toggle="tooltip" data-bs-placement="top" title="Related Files">
+          <i class="bi bi-file-earmark-text"></i>
+        </div>
+      </a>
+    </div>
+
+    <!-- Subjects -->
+    <div class="col">
+      {% if request.user == project.owner %}
+      <a href="{% url 'subject_data' project.id %}" class="text-decoration-none">
+        <div class="icon-tile" data-bs-toggle="tooltip" data-bs-placement="top" title="Subjects">
+          <i class="bi bi-people"></i>
+        </div>
+      </a>
+      {% else %}
+      <div class="icon-tile disabled" data-bs-toggle="tooltip" data-bs-placement="top" title="Subjects (Owner Only)">
+        <i class="bi bi-people"></i>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Settings -->
+    <div class="col">
+      {% if request.user == project.owner %}
+      <a href="{% url 'project_settings' project.id %}" class="text-decoration-none">
+        <div class="icon-tile" data-bs-toggle="tooltip" data-bs-placement="top" title="Settings">
+          <i class="bi bi-gear"></i>
+        </div>
+      </a>
+      {% else %}
+      <div class="icon-tile disabled" data-bs-toggle="tooltip" data-bs-placement="top" title="Settings (Owner Only)">
+        <i class="bi bi-gear"></i>
+      </div>
+      {% endif %}
+    </div>
+
   </div>
 </div>
 
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+<style>
+  .icon-tile {
+    background-color: #0056d2; /* blue */
+    color: white;
+    border-radius: 20%;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    margin: auto;
+    transition: background 0.2s;
+  }
+  .icon-tile:hover {
+    background-color: #0041a8;
+  }
+  .icon-tile.disabled {
+    background-color: #a0a0a0;
+    pointer-events: none;
+  }
+</style>
+
+<!-- Enable tooltips -->
 <script>
-const groupContainer = document.getElementById("groupNamesContainer");
-const numberInput = document.getElementById("number_of_groups");
-
-// Dynamic group input fields
-numberInput.addEventListener("input", () => {
-    const count = parseInt(numberInput.value) || 1;
-    groupContainer.innerHTML = "";
-    for (let i = 1; i <= count; i++) {
-        const div = document.createElement("div");
-        div.classList.add("mb-2");
-        div.innerHTML = `<label>Group ${i}</label><input type="text" name="group_${i}" class="form-control">`;
-        groupContainer.appendChild(div);
-    }
-});
-
-// Enable file input/buttons after Excel download
-document.querySelector("form button[type='submit']").addEventListener("click", function() {
-    setTimeout(() => {
-        document.getElementById("excelFileInput").disabled = false;
-        document.getElementById("uploadExcelBtn").disabled = false;
-    }, 1000);
-});
-
-// Upload Excel and show summary
-document.getElementById("uploadExcelBtn").addEventListener("click", function() {
-    const file = document.getElementById("excelFileInput").files[0];
-    if (!file) { alert("Select a file first."); return; }
-
-    let formData = new FormData();
-    formData.append("file", file);
-
-    fetch("{% url 'upload_excel_preview' %}", {
-        method: "POST",
-        body: formData,
-        headers: {"X-CSRFToken": "{{ csrf_token }}"}
+  document.addEventListener("DOMContentLoaded", function () {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
     })
-    .then(res => res.json())
-    .then(data => {
-        // Success and Message
-        document.getElementById("summarySuccess").innerText = data.success ? "Yes" : "No";
-        document.getElementById("summaryMessage").innerText = data.message;
-
-        // Independent Variables
-        let ivContainer = document.getElementById("summaryIV");
-        ivContainer.innerHTML = "";
-        for (const variable in data.independent_variables) {
-            const values = data.independent_variables[variable];
-            const p = document.createElement("p");
-            p.innerText = `${variable}: ${values.join(", ")}`;
-            ivContainer.appendChild(p);
-        }
-
-        // Possible Typos
-        let typosList = document.getElementById("summaryTypos");
-        typosList.innerHTML = "";
-        for (const typo in data.possible_typos) {
-            for (const suggestion in data.possible_typos[typo]) {
-                const locations = data.possible_typos[typo][suggestion];
-                const li = document.createElement("li");
-                li.innerText = `${typo} → ${suggestion} (Locations: ${locations.join(", ")})`;
-                typosList.appendChild(li);
-            }
-        }
-
-        // Show modal
-        new bootstrap.Modal(document.getElementById("summaryModal")).show();
-        uploadedFile = file;
-    });
-});
-
-// Confirm Upload
-document.getElementById("confirmUploadBtn").addEventListener("click", function() {
-    if (!uploadedFile) { alert("No file selected!"); return; }
-    const formData = new FormData();
-    formData.append("file", uploadedFile);
-
-    fetch("{% url 'upload_excel_confirm' %}", {
-        method: "POST",
-        body: formData,
-        headers: {"X-CSRFToken": "{{ csrf_token }}"}
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            window.location.href = data.redirect_url;
-        } else {
-            alert("Error: " + data.message);
-        }
-    });
-});
+  })
 </script>
-
 {% endblock %}

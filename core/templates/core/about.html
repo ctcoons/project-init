@@ -1,0 +1,96 @@
+{% extends "core/base.html" %}
+{% block content %}
+<h2>About Project</h2>
+    <a href="{% url 'project_detail' project.id %}">
+        <button class="btn btn-primary">&#x2190; Back</button>
+    </a>
+<br>
+<br>
+
+<div class="card">
+  <div class="card-body">
+    <h3>{{ project.project_name }}</h3>
+    <p><strong>Owner:</strong> {{ project.owner.username }}</p>
+    <p><strong>Collaborators:</strong>
+      {% for membership in project.memberships.all %}
+        {% if membership.role == "collaborator" %}
+            <li>{{ membership.user.username }}</li>
+        {% endif %}
+    {% empty %}
+        <li>No collaborators yet.</li>
+    {% endfor %}
+    </p>
+    <p><strong>Description:</strong> {{ project.description }}</p>
+    <p><strong>Independent Variables:</strong></p>
+        {% if project.independent_variable %}
+            <ul>
+                {% for category, options in project.independent_variable.items %}
+                    <li>
+                        <strong>{{ category }}</strong>
+                        <ul>
+                            {% for option in options %}
+                                <li>{{ option }}</li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No independent variables defined.</p>
+        {% endif %}
+  </div>
+</div>
+
+<h3 class="mt-4">Groups</h3>
+<div class="accordion" id="groupsAccordion">
+  {% for group in project.group_data.all %}
+    <div class="accordion-item">
+      <h2 class="accordion-header" id="groupHeading{{ forloop.counter }}">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                data-bs-target="#groupCollapse{{ forloop.counter }}"
+                aria-expanded="false" aria-controls="groupCollapse{{ forloop.counter }}">
+          {{ group.group_name }}
+        </button>
+      </h2>
+      <div id="groupCollapse{{ forloop.counter }}" class="accordion-collapse collapse"
+           aria-labelledby="groupHeading{{ forloop.counter }}" data-bs-parent="#groupsAccordion">
+        <div class="accordion-body">
+
+          <!-- Now group sub-data by category -->
+          {% regroup group.group_sub_data.all by category as grouped_subdata %}
+          <div class="accordion" id="categoryAccordion{{ forloop.counter }}">
+            {% for category in grouped_subdata %}
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="categoryHeading{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#categoryCollapse{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                          aria-expanded="false" aria-controls="categoryCollapse{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                    {{ category.grouper }}
+                  </button>
+                </h2>
+                <div id="categoryCollapse{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                     class="accordion-collapse collapse"
+                     aria-labelledby="categoryHeading{{ forloop.parentloop.counter }}-{{ forloop.counter }}"
+                     data-bs-parent="#categoryAccordion{{ forloop.parentloop.counter }}">
+                  <div class="accordion-body">
+                    <ul class="list-group">
+                      {% for sub in category.list %}
+                        <li class="list-group-item">
+                          <strong>{{ sub.label }}:</strong> {{ sub.value }}
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <p>No groups found.</p>
+  {% endfor %}
+</div>
+{% endblock %}

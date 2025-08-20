@@ -3,8 +3,11 @@
 
 {% block content %}
 <h2>Add Subject Data for {{ project.project_name }}</h2>
-
+<a href="{% url 'subject_data' project.id %}" >
+        <button class="btn btn-primary">&#x2190; Back</button>
+</a>
 {% if request.user == project.owner %}
+
     <!-- Step 1: Upload CSV -->
     <form method="post" enctype="multipart/form-data" class="mb-4">
         {% csrf_token %}

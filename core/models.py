@@ -1,19 +1,51 @@
+import uuid
 from django.contrib.auth.models import User
 from django.db import models
-from django.conf import settings
+from django.utils import timezone
 
 
 class ProjectData(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="owned_projects")
     project_name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     number_of_groups = models.PositiveIntegerField()
     group_names = models.TextField(help_text="Comma-separated group names")
     independent_variable = models.JSONField(default=dict)
-    created_at = models.DateTimeField(auto_now_add=True)  # <- this is correct  # Comma-separated group names
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_owner(self, user):
+        return self.owner == user
+
+    def get_role(self, user):
+        """Return 'owner', 'collaborator', or None if no membership."""
+        if self.is_owner(user):
+            return "owner"
+        membership = self.memberships.filter(user=user).first()
+        return membership.role if membership else None
+
+    def can_edit(self, user):
+        """Owner and collaborators can edit; everyone can view."""
+        return self.get_role(user) in ["owner", "collaborator"]
 
     def __str__(self):
         return f"{self.project_name} ({self.owner.username})"
+
+
+class ProjectMembership(models.Model):
+    ROLE_CHOICES = [
+        ("owner", "Owner"),
+        ("collaborator", "Collaborator"),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    project = models.ForeignKey(ProjectData, on_delete=models.CASCADE, related_name="memberships")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="collaborator")
+
+    class Meta:
+        unique_together = ("user", "project")  # prevent duplicates
+
+    def __str__(self):
+        return f"{self.user.username} - {self.project.project_name} ({self.role})"
 
 
 class GroupData(models.Model):
@@ -28,7 +60,6 @@ class GroupSubData(models.Model):
     value = models.TextField(null=True)
 
 
-# models.py
 class Subject(models.Model):
     group = models.ForeignKey(GroupData, related_name="subjects", on_delete=models.CASCADE)
     metadata = models.JSONField(default=dict, blank=True)  # store CSV row
@@ -48,3 +79,12 @@ class ProjectFile(models.Model):
 
     def __str__(self):
         return f"{self.file.name} ({self.visibility})"
+
+
+class ProjectJoinToken(models.Model):
+    project = models.ForeignKey(ProjectData, on_delete=models.CASCADE, related_name="join_tokens")
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.project.project_name} - {self.token}"
