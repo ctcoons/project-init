@@ -1,10 +1,8 @@
 import os
-import uuid
 from collections import defaultdict
 from functools import wraps
 
 from django.contrib import messages
-from django.core.mail import send_mail
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
@@ -60,7 +58,6 @@ def home(request):
 
 
 # ----------------- List Projects -----------------
-
 @login_required
 def project_list(request):
     projects = ProjectData.objects.all()
@@ -80,7 +77,7 @@ def start_project(request):
 
             # Collect dynamic group names
             groups = [request.POST.get(f"group_{i}") for i in range(1, project_model.number_of_groups + 1)]
-            project_model.group_names = ",".join(groups)
+            project_model.group_names = "\t".join(groups)
             project_model.save()
 
             # Prepare Excel data
@@ -126,7 +123,7 @@ def upload_excel_preview(request):
             name=project_model.project_name,
             owner=request.user.username,
             description=project_model.description,
-            groups=project_model.group_names.split(",")
+            groups=project_model.group_names.split("\t")
         )
 
         reader = FileReader()

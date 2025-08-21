@@ -1,7 +1,8 @@
 import uuid
+from importlib.metadata import metadata
+
 from django.contrib.auth.models import User
 from django.db import models
-from django.utils import timezone
 
 
 class ProjectData(models.Model):
@@ -9,7 +10,7 @@ class ProjectData(models.Model):
     project_name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     number_of_groups = models.PositiveIntegerField()
-    group_names = models.TextField(help_text="Comma-separated group names")
+    group_names = models.TextField(help_text="Tab-separated group names")
     independent_variable = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -52,6 +53,9 @@ class GroupData(models.Model):
     project = models.ForeignKey(ProjectData, on_delete=models.CASCADE, related_name="group_data")
     group_name = models.CharField(max_length=200)
 
+    def __str__(self):
+        return f"{self.group_name}"
+
 
 class GroupSubData(models.Model):
     group = models.ForeignKey(GroupData, on_delete=models.CASCADE, related_name="group_sub_data")
@@ -63,6 +67,9 @@ class GroupSubData(models.Model):
 class Subject(models.Model):
     group = models.ForeignKey(GroupData, related_name="subjects", on_delete=models.CASCADE)
     metadata = models.JSONField(default=dict, blank=True)  # store CSV row
+
+    def __str__(self):
+        return f"Subject: {str(self.metadata)}, Group: {str(self.group)}"
 
 
 class ProjectFile(models.Model):
