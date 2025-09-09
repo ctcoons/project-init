@@ -333,8 +333,10 @@ def add_subject_data(request, project_id):
 def delete_subject(request, project_id, subject_id):
     project = get_object_or_404(ProjectData, id=project_id)
 
+    is_owner = project.owner == request.user
+    is_collaborator = project.memberships.filter(user=request.user, role="collaborator").exists()
     # Only project owner or collaborators can delete
-    if not (request.user == project.owner or project.collaborators.filter(id=request.user.id).exists()):
+    if not (is_owner or is_collaborator):
         return HttpResponseForbidden("You do not have permission to delete this subject.")
 
     subject = get_object_or_404(Subject, id=subject_id, group__project=project)
@@ -442,3 +444,99 @@ def make_json_safe(obj):
         return make_json_safe(obj.__dict__)
     else:
         return obj
+
+
+# ----------------- Tutorial -----------------
+# Number of steps in tutorial
+TOTAL_STEPS = 9
+
+# Where the Finish button should go
+FINISH_REDIRECT = "start_project"
+
+TUTORIAL_STEPS = [
+    {
+        "description": "Start Your Project",
+        "long_description": "Type the name of your project, and a brief description of what you will be doing in your "
+                            "project (less than 100 words)",
+    },
+    {
+        "description": "Set Groups",
+        "long_description": "Next, add the number of groups you will be testing and their names. For example, "
+                            "if you will be testing 3 groups and the names of these groups are “Placebo”, “Drug A”, "
+                            "and “Drug B”, you would add 3 groups where it says “Number of Groups” and put these "
+                            "names under “Group1”, “Group2”, and “Group3”",
+    },
+    {
+        "description": "Download Your Data Entry Sheet",
+        "long_description": "After you have entered the Project Name, Description, Number of Groups, and Group Names, "
+                            "click “Start Project (Download Excel)”. This will download a .xlsm file to your browser "
+                            "that you will need to open and fill out",
+    },
+    {
+        "description": "Open The Downloaded File",
+        "long_description": "Next, open up the .xlsm file that was dowloaded to your browser. If you don’t have "
+                            "Microsoft Excel Desktop, some of the functionality will be lost. Get started filling out "
+                            "the data about your groups. Optionally, you can also select presets to the left to "
+                            "expedite the data entry process.",
+    },
+    {
+        "description": "(optional) Use Built-In Features",
+        "long_description": "Optionally, after filling out one column, you can click this button for a quick copy and "
+                            "paste horizontally to the rest of your groups. After this, you can change individual "
+                            "cells as needed. ",
+    },
+    {
+        "description": "(optional) Add Custom Variables",
+        "long_description": "If you wish to add a variable that isn’t already defined, put the label of that variable "
+                            "to the left of the columns that represent the group data, and then put in the values "
+                            "that correspond to each group. For example, in you could add “Drug Given” as a category, "
+                            "with “Placebo”, “Drug A”, and “Drug B” as values. (Alternatively this could be put under "
+                            "“Treatment”) ",
+    },
+    {
+        "description": "Continue To Enter Data",
+        "long_description": "Finish filling out the rest of the data in the sheet for SAMPLE PREP, LC PARAMETERS, "
+                            "and MS PARAMETERS. If the data in a cell is not applicable or unknown, insert “N/A” or "
+                            "“UNKNOWN” respectively. If your group has multiple values, insert “MULTIPLE” or a "
+                            "Comma-Separated-Value. For Example, if you have multiple sexes in one group, you can add "
+                            "“MULTIPLE” or “Male,Female”",
+    },
+    {
+        "description": "Save and Upload .xlsm File",
+        "long_description": "SAVE THE EDITS YOU HAVE MADE TO YOUR COMPUTER. Next, click “Choose File” and pick the "
+                            ".xlsm file that you have been working on. Once you have selected, click “Upload Excel "
+                            "File”",
+    },
+    {
+        "description": "Review and Confirm",
+        "long_description": "Look over the “Excel Upload Summary”. If everything is correct, click “confirm”. If you "
+                            "need to make an edit, click “Cancel”, edit your .xlsm sheet, and re-upload the file. "
+                            "NOTE - Some scientific terms might come up as “Typos” even though they aren’t typos. You "
+                            "can ignore this. The → arrow suggest corrections, but will not change any data you have "
+                            "inputted.",
+    }
+]
+
+
+@login_required
+def tutorial(request, step_number=1):
+    if step_number < 1 or step_number > TOTAL_STEPS:
+        return redirect("tutorial", step_number=1)
+
+    step_info = TUTORIAL_STEPS[step_number - 1]
+    step = {
+        "number": step_number,
+        "description": step_info["description"],
+        "long_description": step_info["long_description"],
+        "image": f"core/tutorial/tutorial-v-1-step-{step_number}.png",
+    }
+
+    return render(
+        request,
+        "core/tutorial.html",
+        {
+            "step": step,
+            "total_steps": TOTAL_STEPS,
+            "finish_redirect": FINISH_REDIRECT,
+        },
+    )

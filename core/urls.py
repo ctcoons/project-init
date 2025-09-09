@@ -20,4 +20,5 @@ urlpatterns = [
     path('project/<int:project_id>/join/<uuid:token>/', views.join_project, name='join_project'),
     path("project/<int:project_id>/about/", views.project_about, name="project_about"),
     path("project/<int:project_id>/raw-ms-data/", views.raw_ms_data, name="raw_ms_data"),
+    path('tutorial/<int:step_number>/', views.tutorial, name='tutorial'),
 ]

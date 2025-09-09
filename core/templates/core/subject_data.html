@@ -17,7 +17,7 @@
             {% else %}
                 <th>Metadata</th>
             {% endif %}
-            <th>Group</th>
+            <th style="color: blue;">Group</th>
             {% if request.user == project.owner or request.user in project.collaborators.all %}
                 <th>Actions</th>
             {% endif %}
@@ -35,7 +35,6 @@
                 <td>-</td>
             {% endif %}
             <td>{{ subject.group.group_name }}</td>
-            {% if request.user == project.owner or request.user in project.collaborators.all %}
             <td>
                 <form action="{% url 'delete_subject' project.id subject.id %}" method="post" style="display:inline;">
                     {% csrf_token %}
@@ -45,7 +44,6 @@
                     </button>
                 </form>
             </td>
-            {% endif %}
         </tr>
         {% endfor %}
     </tbody>

@@ -1,0 +1,117 @@
+{% extends "core/base.html" %}
+{% block content %}
+{% load static %}
+<head>
+    <title>Project Setup Walkthrough</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .content {
+            flex: 1;
+            overflow-y: auto; /* scroll if description is long */
+            padding: 20px;
+            padding-bottom: 80px; /* space so content isn’t hidden behind buttons */
+        }
+        .img-box {
+            height: 400px; /* large image area */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .img-box img {
+            max-height: 100%;
+            max-width: 100%;
+        }
+        .description {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .long-description {
+            width: 90%;
+            margin: auto;
+            text-align: left;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+        .nav-buttons {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding: 10px 0;
+            border-top: 1px solid #eee;
+            background: #fff;
+            z-index: 1000;
+        }
+        button {
+            border: none;
+            border-radius: 20px;
+            padding: 10px 22px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        .step-counter {
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="content">
+            <h2>Tutorial</h2>
+
+            <div class="img-box">
+                <img src="{% static step.image %}" alt="Step {{ step.number }}">
+            </div>
+
+            <p class="description">Step {{ step.number }}: {{ step.description }}</p>
+            <p class="long-description">{{ step.long_description }}</p>
+        </div>
+    </div>
+
+    <div class="nav-buttons">
+        <a href="{% url 'tutorial' step.number|add:'-1' %}">
+            <button {% if step.number == 1 %}disabled{% endif %}>Previous</button>
+        </a>
+
+        <span class="step-counter">Step {{ step.number }}/{{ total_steps }}</span>
+
+        <a href="{% url 'tutorial' step.number|add:'1' %}">
+            <button {% if step.number == total_steps %}disabled{% endif %}>Next</button>
+        </a>
+
+        <a href="{% url finish_redirect %}">
+            <button>Exit Tutorial</button>
+        </a>
+    </div>
+</body>
+{% endblock %}
