@@ -5,7 +5,18 @@
 <div class="container text-center my-4">
 
   <!-- Project Title -->
-  <h1>{{ project.project_name }}</h1>
+  <div class="d-flex justify-content-center align-items-center position-relative">
+  <!-- Centered Title -->
+  <h1 class="mb-0 text-center">{{ project.project_name }}</h1>
+
+  <!-- Help Link on the Top Right -->
+  <a href="#"
+   class="position-absolute end-0 me-3 d-flex align-items-center text-decoration-none"
+   data-bs-toggle="modal" data-bs-target="#helpModal">
+  <i class="bi bi-question-circle fs-4 text-primary me-1"></i>
+  <span class="fs-5 text-primary">Help</span>
+  </a>
+  </div>
   <hr>
 
   <!-- Owner and description -->
@@ -98,6 +109,35 @@
 
   </div>
 </div>
+
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <!-- Modal Header -->
+      <div class="modal-header">
+        <h5 class="modal-title" id="helpModalLabel">Help</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="modal-body">
+        <p>I'll work on this later to what we want in the help icon. </p>
+        <a href="{% static 'core/other-images/project-flow-diagram.png' %}" target="_blank">
+            Project Flow Diagram
+        </a>
+        <p>For Additional help, contact us at <a href="mailto:someone@example.com">someone@example.com</a></p>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">

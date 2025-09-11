@@ -473,7 +473,7 @@ TUTORIAL_STEPS = [
                             "that you will need to open and fill out",
     },
     {
-        "description": "Open The Downloaded File",
+        "description": "Open and Fill Out the Downloaded File",
         "long_description": "Next, open up the .xlsm file that was dowloaded to your browser. If you don’t have "
                             "Microsoft Excel Desktop, some of the functionality will be lost. Get started filling out "
                             "the data about your groups. Optionally, you can also select presets to the left to "

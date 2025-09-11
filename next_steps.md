@@ -5,6 +5,9 @@
 - Talk with the other lab members about how they want to access their project
 - On the Upload, If Success==No, "Confirm" shouldn't be clickable
 - I Don't think The Project Should be started yet until they click "Confirm"
+- Update Settings Page
+- Add things to the ? Help icon on the project detail page
+
 ---
 
 ### Known Bugs
