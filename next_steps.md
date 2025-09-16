@@ -7,7 +7,7 @@
 - I Don't think The Project Should be started yet until they click "Confirm"
 - Update Settings Page
 - Add things to the ? Help icon on the project detail page
-
+- !! FIX SUBJECTS
 ---
 
 ### Known Bugs

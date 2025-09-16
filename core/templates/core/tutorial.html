@@ -109,9 +109,8 @@
             <button {% if step.number == total_steps %}disabled{% endif %}>Next</button>
         </a>
 
-        <a href="{% url finish_redirect %}">
-            <button>Exit Tutorial</button>
-        </a>
+        <button onclick="window.close()">Exit Tutorial</button>
+
     </div>
 </body>
 {% endblock %}

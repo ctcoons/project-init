@@ -50,7 +50,7 @@
     <ul class="pagination justify-content-center" id="pagination"></ul>
   </nav>
 
-  <a href="{% url 'tutorial' 1 %}" class="btn btn-success mt-3">Create a New Project</a>
+    <button class="btn btn-success mt-3" onclick="createNewProject()">Create a New Project</button>
 
 </div>
 
@@ -117,11 +117,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
     renderTable();
 
+
     // Enable Bootstrap tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     tooltipTriggerList.map(function (tooltipTriggerEl) {
       return new bootstrap.Tooltip(tooltipTriggerEl)
     })
 });
+
+function createNewProject() {
+// Open tutorial in a new tab
+window.open("{% url 'tutorial' 1 %}", "_blank");
+
+// Redirect current page to the project creation page
+window.location.href = "{% url 'start_project' %}";
+}
+
 </script>
 {% endblock %}

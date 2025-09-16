@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
-from .models import ProjectData, ProjectFile
+from .models import ProjectData, ProjectFile, Subject
 
 
 class SignUpForm(UserCreationForm):
@@ -34,15 +34,17 @@ class CSVUploadForm(forms.Form):
 
 
 class SubjectSelectionForm(forms.Form):
-    group = forms.ChoiceField(choices=[], required=True)
-    subjects = forms.MultipleChoiceField(widget=forms.CheckboxSelectMultiple, required=False)
+    subjects = forms.MultipleChoiceField(
+        widget=forms.CheckboxSelectMultiple,
+        required=False
+    )
 
     def __init__(self, *args, **kwargs):
-        groups = kwargs.pop("groups", [])
         subjects = kwargs.pop("subjects", [])
         super().__init__(*args, **kwargs)
-        self.fields["group"].choices = [(g.id, g.group_name) for g in groups]
-        self.fields["subjects"].choices = [(i, f"Row {i+1}") for i, _ in enumerate(subjects)]
+        self.fields["subjects"].choices = [
+            (i, f"Row {i+1}") for i, _ in enumerate(subjects)
+        ]
 
 
 class ProjectFileForm(forms.ModelForm):

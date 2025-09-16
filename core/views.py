@@ -196,7 +196,7 @@ def upload_excel_confirm(request):
 def project_detail(request, project_id):
     project = get_object_or_404(ProjectData, id=project_id)
     group_data = project.group_data.all()  # all groups in this project
-    subjects = Subject.objects.filter(group__project=project)  # all subjects linked to this project
+    subjects = Subject.objects.filter(project=project)  # all subjects linked to this project
 
     return render(
         request,
@@ -256,8 +256,8 @@ def delete_file(request, project_id, file_id):
 @login_required
 def subject_data_page(request, project_id):
     project = get_object_or_404(ProjectData, id=project_id)
-    subjects = Subject.objects.filter(group__project=project).select_related("group")
-    # Check if user is owner or collaborator
+    subjects = project.subjects.all()  # now tied directly to project
+
     is_authorized = (
         request.user == project.owner or
         ProjectMembership.objects.filter(
@@ -278,47 +278,54 @@ def subject_data_page(request, project_id):
 @login_required
 def add_subject_data(request, project_id):
     project = get_object_or_404(ProjectData, id=project_id)
-    groups = project.group_data.all()
+    session_key = f"subjects_preview_{project_id}"
 
-    subjects = request.session.get("subjects_preview", [])
-
-    # Step 1: Upload CSV
-    if request.method == "POST" and "upload_csv" in request.POST:
-        form = CSVUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            file = form.cleaned_data["csv_file"]
-            decoded = file.read().decode("utf-8")
-            import csv, io
-            reader = csv.DictReader(io.StringIO(decoded))
-            subjects = list(reader)
-            request.session["subjects_preview"] = subjects
-            selection_form = SubjectSelectionForm(groups=groups, subjects=subjects)
-        else:
-            selection_form = None
-
-    # Step 2: Add selected subjects
-    elif request.method == "POST" and "add_subjects" in request.POST:
-        selection_form = SubjectSelectionForm(request.POST, groups=groups, subjects=subjects)
-        if selection_form.is_valid():
-            group_id = selection_form.cleaned_data["group"]
-            selected_indexes = selection_form.cleaned_data["subjects"]
-            group = get_object_or_404(GroupData, id=group_id)
-            added = 0
-
-            for idx in selected_indexes:
-                data = subjects[int(idx)]
-                Subject.objects.create(group=group, metadata=data)
-                added += 1
-
-            # Update session to remove added subjects
-            subjects = [s for i, s in enumerate(subjects) if str(i) not in selected_indexes]
-            request.session["subjects_preview"] = subjects
-
-            messages.success(request, f"Successfully added {added} subjects to {group.group_name}.")
-            return redirect("add_subject_data", project_id=project.id)
+    # Clear session if first GET visit
+    if request.method == "GET":
+        request.session.pop(session_key, None)
+        subjects = []
+        selection_form = None
     else:
-        # GET request
-        selection_form = None if not subjects else SubjectSelectionForm(groups=groups, subjects=subjects)
+        # Use previously uploaded subjects if available
+        subjects = request.session.get(session_key, [])
+
+        # Step 1: Upload CSV
+        if "upload_csv" in request.POST:
+            form = CSVUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                file = form.cleaned_data["csv_file"]
+                decoded = file.read().decode("utf-8")
+                import csv, io
+                reader = csv.DictReader(io.StringIO(decoded))
+                subjects = list(reader)
+
+                request.session[session_key] = subjects
+                selection_form = SubjectSelectionForm(subjects=subjects)
+            else:
+                selection_form = None
+
+        # Step 2: Add selected subjects
+        elif "add_subjects" in request.POST:
+            selection_form = SubjectSelectionForm(request.POST, subjects=subjects)
+            if selection_form.is_valid():
+                selected_indexes = selection_form.cleaned_data["subjects"]
+                added = 0
+
+                for idx in selected_indexes:
+                    data = subjects[int(idx)]
+                    Subject.objects.create(project=project, metadata=data)
+                    added += 1
+
+                # Remove added subjects from preview
+                subjects = [s for i, s in enumerate(subjects) if str(i) not in selected_indexes]
+                request.session[session_key] = subjects
+
+                messages.success(request, f"Successfully added {added} subjects to {project.project_name}.")
+                return redirect("add_subject_data", project_id=project.id)
+
+        else:
+            # POST but not recognized, still show preview if exists
+            selection_form = None if not subjects else SubjectSelectionForm(subjects=subjects)
 
     return render(request, "core/add_subject_data.html", {
         "project": project,
@@ -328,6 +335,7 @@ def add_subject_data(request, project_id):
     })
 
 
+
 @project_role_required(["collaborator"])
 @login_required
 def delete_subject(request, project_id, subject_id):
@@ -335,18 +343,16 @@ def delete_subject(request, project_id, subject_id):
 
     is_owner = project.owner == request.user
     is_collaborator = project.memberships.filter(user=request.user, role="collaborator").exists()
-    # Only project owner or collaborators can delete
     if not (is_owner or is_collaborator):
         return HttpResponseForbidden("You do not have permission to delete this subject.")
 
-    subject = get_object_or_404(Subject, id=subject_id, group__project=project)
+    subject = get_object_or_404(Subject, id=subject_id, project=project)
 
     if request.method == "POST":
         subject.delete()
         messages.success(request, "Subject deleted successfully.")
         return redirect("subject_data", project_id=project.id)
 
-    # If accessed via GET, just redirect back
     return redirect("subject_data", project_id=project.id)
 
 
@@ -376,6 +382,17 @@ def project_settings(request, project_id):
         elif 'generate_invite' in request.POST:
             join_token = ProjectJoinToken.objects.create(project=project)
             invite_link = request.build_absolute_uri(f"/project/{project.id}/join/{join_token.token}/")
+        elif "delete_membership_id" in request.POST:
+            mem_id = request.POST.get("delete_membership_id")
+            membership_to_delete = get_object_or_404(ProjectMembership, id=mem_id, project=project)
+
+            if membership_to_delete.role == "owner":
+                messages.error(request, "You cannot remove the project owner.")
+            else:
+                membership_to_delete.delete()
+                messages.success(request, f"Removed {membership_to_delete.user.username} from collaborators.")
+
+            return redirect("project_settings", project.id)
 
 
     collaborators = ProjectMembership.objects.filter(project=project)
@@ -392,6 +409,9 @@ def project_settings(request, project_id):
 @login_required
 def join_project(request, project_id, token):
     project = get_object_or_404(ProjectData, id=project_id)
+    user = project.owner
+    if request.user == user:
+        return redirect('project_list')
 
     # Check the token
     try:

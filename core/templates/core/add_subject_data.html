@@ -18,16 +18,15 @@
     <!-- Step 2: Select Subjects to Add -->
     <form method="post" id="subjectForm">
         {% csrf_token %}
-        <div class="mb-3">
-            {{ selection_form.group.label_tag }} {{ selection_form.group }}
-        </div>
 
-        <h3 id="subjectCounter">Add 0 Subjects to Selected Group</h3>
+        <h3 id="subjectCounter">Add 0 Subjects to Project</h3>
 
         <table class="table table-striped" id="subjectTable">
             <thead>
                 <tr>
-                    <th>Select</th>
+                    <th>
+                        <input type="checkbox" id="select-all"> Select
+                    </th>
                     {% for key in subjects.0.keys %}
                         <th class="sortable">{{ key }} <span class="sort-arrow">&#9650;</span></th>
                     {% endfor %}
@@ -45,7 +44,9 @@
             </tbody>
         </table>
 
-        <button type="submit" name="add_subjects" class="btn btn-success">Add Selected Subjects</button>
+        <button type="submit" name="add_subjects" class="btn btn-success">
+            Add Selected Subjects
+        </button>
     </form>
 {% else %}
     <p>No subjects uploaded yet. Please upload a CSV to see the preview.</p>
@@ -66,53 +67,55 @@ th.sortable {
     position: relative;
     user-select: none;
 }
-
 th.sortable .sort-arrow {
     font-size: 0.8em;
     margin-left: 5px;
     transition: transform 0.2s ease;
-    display: none; /* hidden by default */
+    display: none;
 }
-
 th.sortable.sorted-asc .sort-arrow {
     display: inline-block;
     transform: rotate(180deg);
 }
-
 th.sortable.sorted-desc .sort-arrow {
     display: inline-block;
     transform: rotate(0deg);
 }
 </style>
 
+<!-- Select All + Counter -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    const checkboxes = document.querySelectorAll("input[type=checkbox]");
+    const checkboxes = document.querySelectorAll("input[type=checkbox]:not(#select-all)");
+    const selectAll = document.getElementById("select-all");
     const counter = document.getElementById("subjectCounter");
 
     function updateCounter() {
-        const selectedCount = document.querySelectorAll("input[type=checkbox]:checked").length;
-        const groupSelect = document.querySelector("select[name=group]");
-        const groupName = groupSelect ? groupSelect.options[groupSelect.selectedIndex].text : "Group";
-        counter.textContent = `Add ${selectedCount} Subjects to "${groupName}"`;
+        const selectedCount = document.querySelectorAll("input[type=checkbox]:not(#select-all):checked").length;
+        counter.textContent = `Add ${selectedCount} Subjects to Project`;
     }
 
-    checkboxes.forEach(cb => cb.addEventListener("change", updateCounter));
-    const groupSelect = document.querySelector("select[name=group]");
-    if (groupSelect) groupSelect.addEventListener("change", updateCounter);
+    checkboxes.forEach(cb => cb.addEventListener("change", () => {
+        updateCounter();
+        selectAll.checked = checkboxes.length === document.querySelectorAll("input[type=checkbox]:not(#select-all):checked").length;
+    }));
+
+    selectAll.addEventListener("change", () => {
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateCounter();
+    });
 
     updateCounter();
 });
 </script>
 
-<!-- Include Tablesort JS -->
+<!-- Tablesort -->
 <script src="https://cdn.jsdelivr.net/npm/tablesort@5.2.1/dist/tablesort.min.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const table = document.getElementById("subjectTable");
     const ts = new Tablesort(table);
 
-    // Update arrow rotation and visibility on sort
     table.querySelectorAll("th.sortable").forEach(th => {
         th.addEventListener("click", () => {
             table.querySelectorAll("th.sortable").forEach(h => h.classList.remove("sorted-asc", "sorted-desc"));

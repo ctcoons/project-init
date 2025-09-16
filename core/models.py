@@ -65,11 +65,11 @@ class GroupSubData(models.Model):
 
 
 class Subject(models.Model):
-    group = models.ForeignKey(GroupData, related_name="subjects", on_delete=models.CASCADE)
+    project = models.ForeignKey(ProjectData, on_delete=models.CASCADE, related_name="subjects")
     metadata = models.JSONField(default=dict, blank=True)  # store CSV row
 
     def __str__(self):
-        return f"Subject: {str(self.metadata)}, Group: {str(self.group)}"
+        return f"Subject: {str(self.metadata)}"
 
 
 class ProjectFile(models.Model):

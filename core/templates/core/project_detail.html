@@ -21,9 +21,17 @@
 
   <!-- Owner and description -->
   <p class="text-muted">By {{ project.owner.username }}</p>
-  <p class="mx-auto" style="max-width: 700px;">
-    {{ project.description }}
-  </p>
+  <div class="mx-auto" style="max-width: 700px;">
+  <button class="btn btn-link p-0 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#projectDescription" aria-expanded="false" aria-controls="projectDescription">
+    Show / Hide Description
+  </button>
+  <div class="collapse" id="projectDescription">
+    <p class="border p-3 rounded bg-light">
+      {{ project.description }}
+    </p>
+  </div>
+  </div>
+
   <hr>
 
   <!-- Icon Grid -->

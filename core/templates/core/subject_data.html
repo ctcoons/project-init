@@ -9,7 +9,7 @@
 <table class="table table-striped" id="subjectsTable">
     <thead>
         <tr>
-            <th>ID</th>
+            <th>#</th>
             {% if subjects %}
                 {% for key in subjects.0.metadata.keys %}
                     <th class="sortable">{{ key }} <span class="sort-arrow">&#9650;</span></th>
@@ -17,7 +17,6 @@
             {% else %}
                 <th>Metadata</th>
             {% endif %}
-            <th style="color: blue;">Group</th>
             {% if request.user == project.owner or request.user in project.collaborators.all %}
                 <th>Actions</th>
             {% endif %}
@@ -34,7 +33,7 @@
             {% else %}
                 <td>-</td>
             {% endif %}
-            <td>{{ subject.group.group_name }}</td>
+            {% if request.user == project.owner or request.user in project.collaborators.all %}
             <td>
                 <form action="{% url 'delete_subject' project.id subject.id %}" method="post" style="display:inline;">
                     {% csrf_token %}
@@ -44,6 +43,7 @@
                     </button>
                 </form>
             </td>
+            {% endif %}
         </tr>
         {% endfor %}
     </tbody>
@@ -81,6 +81,14 @@ document.addEventListener("DOMContentLoaded", function() {
     const table = document.getElementById("subjectsTable");
     const ts = new Tablesort(table);
 
+    // Extend Tablesort with numeric detection
+    Tablesort.extend('number', function(item) {
+        return /^[-+]?\d*\.?\d+$/.test(item.trim());
+    }, function(a, b) {
+        return parseFloat(a) - parseFloat(b);
+    });
+
+    // Handle arrow icons
     table.querySelectorAll("th.sortable").forEach(th => {
         th.addEventListener("click", () => {
             table.querySelectorAll("th.sortable").forEach(h => h.classList.remove("sorted-asc", "sorted-desc"));

@@ -7,6 +7,7 @@
     <div class="mb-3">
         <label for="id_project_name">Project Name</label>
         {{ form.project_name }}
+        <small id="projectNameCounter" class="form-text text-muted">0 / 200</small>
     </div>
     <div class="mb-3">
         <label for="id_description">Description</label>
@@ -77,6 +78,26 @@
 </div>
 
 <script>
+
+document.addEventListener("DOMContentLoaded", function() {
+    const projectInput = document.getElementById("id_project_name");
+    const counter = document.getElementById("projectNameCounter");
+
+    // Set max length in HTML (prevents typing more than 50)
+    projectInput.setAttribute("maxlength", 50);
+
+    function updateCounter() {
+        const length = projectInput.value.length;
+        counter.textContent = `${length} / 50`;
+    }
+
+    // Update counter on input
+    projectInput.addEventListener("input", updateCounter);
+
+    // Initialize counter on page load
+    updateCounter();
+});
+
 const groupContainer = document.getElementById("groupNamesContainer");
 const numberInput = document.getElementById("number_of_groups");
 
